@@ -1,0 +1,69 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: realtime
+  namespace: taskboard
+spec:
+  selector:
+    app: realtime
+  ports:
+    - port: 4003
+      targetPort: 4003
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: realtime
+  namespace: taskboard
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: realtime
+  template:
+    metadata:
+      labels:
+        app: realtime
+    spec:
+      containers:
+        - name: realtime
+          image: taskboard-realtime:local
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 4003
+          env:
+            - name: PORT
+              value: "4003"
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: taskboard-secrets
+                  key: JWT_SECRET
+            - name: REDIS_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: taskboard-config
+                  key: REDIS_URL
+            - name: BOARD_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: taskboard-config
+                  key: BOARD_URL
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 4003
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 4003
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 50m
+              memory: 96Mi
+            limits:
+              memory: 384Mi

@@ -1,0 +1,87 @@
+name: CD
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  verify-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build images
+        run: |
+          for svc in gateway auth board realtime; do
+            docker build -t taskboard-$svc:local backend/$svc
+          done
+          docker build -t taskboard-client:local client
+
+      # A throwaway Kubernetes cluster that only exists for this job.
+      - uses: helm/kind-action@v1
+        with:
+          cluster_name: taskboard
+          config: scripts/kind-config.yaml
+
+      - name: Install the ingress controller
+        run: |
+          kubectl apply -f https://kind.sigs.k8s.io/examples/ingress/deploy-ingress-nginx.yaml
+          kubectl wait --namespace ingress-nginx \
+            --for=condition=ready pod \
+            --selector=app.kubernetes.io/component=controller \
+            --timeout=180s
+
+      - name: Load images into the cluster
+        run: |
+          for img in gateway auth board realtime client; do
+            kind load docker-image taskboard-$img:local --name taskboard
+          done
+
+      - name: Deploy
+        run: |
+          kubectl apply -f k8s/namespace.yaml
+          kubectl -n taskboard create secret generic taskboard-secrets \
+            --from-literal=JWT_SECRET="$(openssl rand -hex 32)"
+          kubectl apply -k k8s
+          kubectl -n taskboard rollout status statefulset/mongo --timeout=180s
+          for d in redis auth board realtime gateway client; do
+            kubectl -n taskboard rollout status deployment/$d --timeout=180s
+          done
+
+      - name: Smoke test
+        run: bash scripts/smoke-test.sh http://localhost
+
+      - name: Load test (2 realtime replicas, 30 clients)
+        run: |
+          cd scripts && npm install
+          BASE=http://localhost CLIENTS=30 node load-test.js
+
+      - name: Show cluster state on failure
+        if: failure()
+        run: |
+          kubectl -n taskboard get pods -o wide
+          for d in auth board realtime gateway client; do
+            echo "--- $d ---"
+            kubectl -n taskboard logs deployment/$d --tail=40 || true
+          done
+
+      # Only reached when the deployment above worked.
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push images to GitHub Container Registry
+        run: |
+          OWNER="${GITHUB_REPOSITORY_OWNER,,}"
+          for img in gateway auth board realtime client; do
+            for tag in "$GITHUB_SHA" latest; do
+              docker tag taskboard-$img:local ghcr.io/$OWNER/taskboard-$img:$tag
+              docker push ghcr.io/$OWNER/taskboard-$img:$tag
+            done
+          done

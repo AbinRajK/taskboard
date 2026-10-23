@@ -1,0 +1,64 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: board
+  namespace: taskboard
+spec:
+  selector:
+    app: board
+  ports:
+    - port: 4002
+      targetPort: 4002
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: board
+  namespace: taskboard
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: board
+  template:
+    metadata:
+      labels:
+        app: board
+    spec:
+      containers:
+        - name: board
+          image: taskboard-board:local
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 4002
+          env:
+            - name: PORT
+              value: "4002"
+            - name: MONGO_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: taskboard-config
+                  key: BOARD_MONGO_URL
+            - name: REDIS_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: taskboard-config
+                  key: REDIS_URL
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 4002
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 4002
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 50m
+              memory: 96Mi
+            limits:
+              memory: 384Mi

@@ -1,0 +1,16 @@
+{
+  "name": "taskboard-gateway",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch --env-file=../../.env src/index.js"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "http-proxy-middleware": "^3.0.5",
+    "ioredis": "^5.4.2",
+    "jsonwebtoken": "^9.0.2"
+  }
+}

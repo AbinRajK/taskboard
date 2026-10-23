@@ -1,0 +1,12 @@
+# `kubectl apply -k k8s` applies everything below. secrets.example.yaml is left out on purpose.
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - mongo.yaml
+  - redis.yaml
+  - auth.yaml
+  - board.yaml
+  - realtime.yaml
+  - gateway.yaml
+  - client.yaml
+  - ingress.yaml

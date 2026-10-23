@@ -1,0 +1,79 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway
+  namespace: taskboard
+spec:
+  selector:
+    app: gateway
+  ports:
+    - port: 4000
+      targetPort: 4000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway
+  namespace: taskboard
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gateway
+  template:
+    metadata:
+      labels:
+        app: gateway
+    spec:
+      containers:
+        - name: gateway
+          image: taskboard-gateway:local
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 4000
+          env:
+            - name: PORT
+              value: "4000"
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: taskboard-secrets
+                  key: JWT_SECRET
+            - name: REDIS_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: taskboard-config
+                  key: REDIS_URL
+            - name: AUTH_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: taskboard-config
+                  key: AUTH_URL
+            - name: BOARD_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: taskboard-config
+                  key: BOARD_URL
+            - name: REALTIME_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: taskboard-config
+                  key: REALTIME_URL
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 4000
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 4000
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 50m
+              memory: 96Mi
+            limits:
+              memory: 384Mi

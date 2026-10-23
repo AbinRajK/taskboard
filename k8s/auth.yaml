@@ -1,0 +1,64 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth
+  namespace: taskboard
+spec:
+  selector:
+    app: auth
+  ports:
+    - port: 4001
+      targetPort: 4001
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth
+  namespace: taskboard
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: auth
+  template:
+    metadata:
+      labels:
+        app: auth
+    spec:
+      containers:
+        - name: auth
+          image: taskboard-auth:local
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 4001
+          env:
+            - name: PORT
+              value: "4001"
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: taskboard-secrets
+                  key: JWT_SECRET
+            - name: MONGO_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: taskboard-config
+                  key: AUTH_MONGO_URL
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 4001
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 4001
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 50m
+              memory: 96Mi
+            limits:
+              memory: 384Mi

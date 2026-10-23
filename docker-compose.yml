@@ -1,0 +1,59 @@
+# Local development stack: databases, the four backend services, and a 2-replica realtime
+# service. Run the Next.js client separately with `npm run dev` inside client/.
+services:
+  mongo:
+    image: mongo:7
+    volumes:
+      - mongo-data:/data/db
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+
+  auth:
+    build: ./backend/auth
+    environment:
+      PORT: 4001
+      MONGO_URL: mongodb://mongo:27017/auth
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-me}
+    depends_on: [mongo]
+    restart: unless-stopped
+
+  board:
+    build: ./backend/board
+    environment:
+      PORT: 4002
+      MONGO_URL: mongodb://mongo:27017/boards
+      REDIS_URL: redis://redis:6379
+    depends_on: [mongo, redis]
+    restart: unless-stopped
+
+  realtime:
+    build: ./backend/realtime
+    environment:
+      PORT: 4003
+      REDIS_URL: redis://redis:6379
+      BOARD_URL: http://board:4002
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-me}
+    depends_on: [redis, board]
+    deploy:
+      replicas: 2
+    restart: unless-stopped
+
+  gateway:
+    build: ./backend/gateway
+    ports:
+      - "4000:4000"
+    environment:
+      PORT: 4000
+      REDIS_URL: redis://redis:6379
+      AUTH_URL: http://auth:4001
+      BOARD_URL: http://board:4002
+      REALTIME_URL: http://realtime:4003
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-me}
+    depends_on: [auth, board, realtime, redis]
+    restart: unless-stopped
+
+volumes:
+  mongo-data:

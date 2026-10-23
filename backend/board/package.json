@@ -1,0 +1,16 @@
+{
+  "name": "taskboard-board",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch --env-file=../../.env src/index.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "ioredis": "^5.4.2",
+    "mongoose": "^8.9.5"
+  }
+}

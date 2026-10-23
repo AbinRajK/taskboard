@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        dir: [backend/gateway, backend/auth, backend/board, backend/realtime, client]
+    defaults:
+      run:
+        working-directory: ${{ matrix.dir }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: ${{ matrix.dir }}/package-lock.json
+
+      - run: npm ci
+      - run: npm run lint --if-present
+      - run: npm test --if-present
+
+      - name: Build the Next.js app
+        if: matrix.dir == 'client'
+        run: npm run build
+
+      - name: Build the Docker image
+        run: docker build -t check-image .
