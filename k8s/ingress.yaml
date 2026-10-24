@@ -20,7 +20,7 @@ spec:
                 port:
                   number: 4000
           - path: /socket.io
-            pathType: Prefix
+            pathType: ImplementationSpecific
             backend:
               service:
                 name: gateway
