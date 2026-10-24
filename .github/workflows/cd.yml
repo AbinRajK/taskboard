@@ -82,9 +82,19 @@ jobs:
       - name: Push images to GitHub Container Registry
         run: |
           OWNER="${GITHUB_REPOSITORY_OWNER,,}"
+
+          push() {
+            for attempt in 1 2 3; do
+              docker push -q "$1" && return 0
+              echo "push of $1 failed (attempt $attempt), retrying in 10s"
+              sleep 10
+            done
+            return 1
+          }
+
           for img in gateway auth board realtime client; do
             for tag in "$GITHUB_SHA" latest; do
               docker tag taskboard-$img:local ghcr.io/$OWNER/taskboard-$img:$tag
-              docker push ghcr.io/$OWNER/taskboard-$img:$tag
+              push ghcr.io/$OWNER/taskboard-$img:$tag
             done
           done
