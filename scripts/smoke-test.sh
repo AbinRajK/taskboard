@@ -13,13 +13,27 @@ for i in $(seq 1 40); do
   sleep 3
 done
 
+# The gateway can be healthy a few seconds before it can reach auth, because the cluster
+# needs a moment to route to a pod that just became ready. Retry only on gateway errors.
 echo "2/5 registering a user"
 EMAIL="smoke-$(date +%s)@example.com"
-RESP=$(curl -s -w '\n%{http_code}' -X POST "$BASE/api/auth/register" \
-  -H 'Content-Type: application/json' \
-  -d "{\"name\":\"Smoke Test\",\"email\":\"$EMAIL\",\"password\":\"smoke-test-pw1\"}")
-STATUS=$(echo "$RESP" | tail -n1)
-BODY=$(echo "$RESP" | sed '$d')
+STATUS=000
+BODY=""
+for i in $(seq 1 20); do
+  RESP=$(curl -s -w '\n%{http_code}' -X POST "$BASE/api/auth/register" \
+    -H 'Content-Type: application/json' \
+    -d "{\"name\":\"Smoke Test\",\"email\":\"$EMAIL\",\"password\":\"smoke-test-pw1\"}" || true)
+  STATUS=$(echo "$RESP" | tail -n1)
+  BODY=$(echo "$RESP" | sed '$d')
+  case "$STATUS" in
+    502|503|504|000)
+      echo "  attempt $i: HTTP $STATUS, services still starting, retrying in 3s"
+      sleep 3
+      ;;
+    *) break ;;
+  esac
+done
+
 if [ "$STATUS" != "201" ]; then
   echo "register failed with HTTP $STATUS"
   echo "$BODY"

@@ -20,7 +20,10 @@ const io = new Server(httpServer, {
   transports: ['websocket'],
   cors: { origin: true },
 });
-io.adapter(createAdapter(redis, redis.duplicate()));
+
+const adapterSub = redis.duplicate();
+adapterSub.on('error', (err) => console.error('[redis:adapter]', err.message));
+io.adapter(createAdapter(redis, adapterSub));
 
 io.use(authenticate);
 io.on('connection', (socket) => registerRoomHandlers(io, socket));
