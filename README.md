@@ -1,6 +1,4 @@
-# Magella
-
-![CD](https://github.com/AbinRajK/taskboard/actions/workflows/cd.yml/badge.svg)
+# Magella - Mini Project Management Software
 
 ![CD](https://github.com/AbinRajK/taskboard/actions/workflows/cd.yml/badge.svg)
 
