@@ -1,6 +1,6 @@
 # Magella - Mini Project Management Software
 
-![CD](https://github.com/AbinRajK/taskboard/actions/workflows/cd.yml/badge.svg) ![CI](https://github.com/AbinRajK/taskboard/actions/workflows/ci.yml/badge.svg)
+![CD](https://github.com/AbinRajK/taskboard/actions/workflows/cd.yml/badge.svg)
 
 A small real-time kanban board built as a microservices project: Next.js client, four Node
 services, Redis, MongoDB, Docker, Kubernetes (kind) and a GitHub Actions pipeline.
