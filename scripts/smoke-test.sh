@@ -15,10 +15,17 @@ done
 
 echo "2/5 registering a user"
 EMAIL="smoke-$(date +%s)@example.com"
-REG=$(curl -fsS -X POST "$BASE/api/auth/register" \
+RESP=$(curl -s -w '\n%{http_code}' -X POST "$BASE/api/auth/register" \
   -H 'Content-Type: application/json' \
   -d "{\"name\":\"Smoke Test\",\"email\":\"$EMAIL\",\"password\":\"smoke-test-pw1\"}")
-TOKEN=$(echo "$REG" | json 'd.token')
+STATUS=$(echo "$RESP" | tail -n1)
+BODY=$(echo "$RESP" | sed '$d')
+if [ "$STATUS" != "201" ]; then
+  echo "register failed with HTTP $STATUS"
+  echo "$BODY"
+  exit 1
+fi
+TOKEN=$(echo "$BODY" | json 'd.token')
 [ -n "$TOKEN" ] || { echo "no token returned"; exit 1; }
 
 echo "3/5 rejecting a request without a token"

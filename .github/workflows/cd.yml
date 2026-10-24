@@ -64,10 +64,13 @@ jobs:
         if: failure()
         run: |
           kubectl -n taskboard get pods -o wide
+          kubectl -n taskboard get endpoints
           for d in auth board realtime gateway client; do
-            echo "--- $d ---"
-            kubectl -n taskboard logs deployment/$d --tail=40 || true
+            echo "=== $d logs ==="
+            kubectl -n taskboard logs deployment/$d --tail=60 || true
           done
+          echo "=== ingress controller ==="
+          kubectl -n ingress-nginx logs -l app.kubernetes.io/component=controller --tail=40 || true
 
       # Only reached when the deployment above worked.
       - uses: docker/login-action@v3
